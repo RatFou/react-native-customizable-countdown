@@ -13,7 +13,8 @@ class CountDown extends Component {
     const {
       initialSeconds,
       backgroundColor,
-      hoursBackgroundStyle,
+      daysBackgroundStyle,
+	  hoursBackgroundStyle,
       minutesBackgroundStyle,
       secondsBackgroundStyle,
       digitColor,
@@ -21,19 +22,28 @@ class CountDown extends Component {
       borderRadius,
       digitFontSize,
       digitFontWeight,
-      hoursDigitFontStyle,
+      daysDigitFontStyle,
+	  hoursDigitFontStyle,
       minutesDigitFontStyle,
       secondsDigitFontStyle,
       labelColor,
       labelFontSize,
       labelFontWeight,
-      hoursLabelFontStyle,
+      daysLabelFontStyle,
+	  hoursLabelFontStyle,
       minutesLabelFontStyle,
       secondsLabelFontStyle,
       labelPosition,
     } = this.props;
 
-    this.propStyleForHoursBackground = {
+    this.propStyleForDaysBackground = {
+      backgroundColor,
+      marginRight:gap/2,
+      borderRadius,
+      ...daysBackgroundStyle,
+    };
+	
+	this.propStyleForHoursBackground = {
       backgroundColor,
       marginRight:gap/2,
       borderRadius,
@@ -54,7 +64,14 @@ class CountDown extends Component {
       ...secondsBackgroundStyle,
     };
 
-    this.propStyleForHoursDigit = {
+    this.propStyleForDaysDigit = {
+      color: digitColor,
+      fontSize: digitFontSize,
+      fontWeight: digitFontWeight,
+      ...daysDigitFontStyle,
+    };
+	
+	this.propStyleForHoursDigit = {
       color: digitColor,
       fontSize: digitFontSize,
       fontWeight: digitFontWeight,
@@ -75,7 +92,14 @@ class CountDown extends Component {
       ...secondsDigitFontStyle,
     };
 
-    this.propStyleForHoursText = {
+    this.propStyleForDaysText = {
+      color: labelColor,
+      fontWeight: labelFontWeight,
+      fontSize: labelFontSize,
+      ...daysLabelFontStyle,
+    };
+	
+	this.propStyleForHoursText = {
       color: labelColor,
       fontWeight: labelFontWeight,
       fontSize: labelFontSize,
@@ -107,6 +131,7 @@ class CountDown extends Component {
       seconds: this.calculateSeconds(initialSeconds),
       minutes: this.calculateMinutes(initialSeconds),
       hours: this.calculateHours(initialSeconds),
+	  days: this.calculateDays(initialSeconds),
     };
 
     this.appState = AppState.currentState;
@@ -114,15 +139,16 @@ class CountDown extends Component {
   }
 
   calculateSeconds = initialSeconds => initialSeconds % 60;
-
+  
   calculateMinutes = initialSeconds => Math.floor(initialSeconds / 60) % 60;
 
-  calculateHours = initialSeconds =>
-    Math.floor(Math.floor(initialSeconds / 60) / 60);
+  calculateHours = initialSeconds => Math.floor(initialSeconds / (60 * 60) % 24);
+	
+  calculateDays = initialSeconds => Math.floor(initialSeconds / (60 * 60 * 24));
 
   calculateTotalSeconds = () => {
-    const {seconds, minutes, hours} = this.state;
-    return seconds + minutes * 60 + hours * 3600;
+    const {seconds, minutes, hours, days} = this.state;
+    return seconds + minutes * 60 + hours * 3600 + days * 86400;
   };
 
   resetCountDown = () => {
@@ -139,40 +165,43 @@ class CountDown extends Component {
         seconds: this.calculateSeconds(initialSeconds),
         minutes: this.calculateMinutes(initialSeconds),
         hours: this.calculateHours(initialSeconds),
+		days: this.calculateDays(initialSeconds),
       },
       () => this.setTimer(),
     );
   };
 
   addSeconds = userSeconds => {
-    let {seconds, minutes, hours} = this.state;
-    const initialSeconds = userSeconds + seconds + minutes * 60 + hours * 3600;
+    let {seconds, minutes, hours, days} = this.state;
+    const initialSeconds = userSeconds + seconds + minutes * 60 + hours * 3600 + days * 86400;
 
     this.setState({
       seconds: this.calculateSeconds(initialSeconds),
       minutes: this.calculateMinutes(initialSeconds),
       hours: this.calculateHours(initialSeconds),
+	  days: this.calculateDays(initialSeconds),
     });
   };
 
   deductSeconds = userSeconds => {
-    let {seconds, minutes, hours} = this.state;
-    const initialSeconds = seconds + minutes * 60 + hours * 3600 - userSeconds;
+    let {seconds, minutes, hours, days} = this.state;
+    const initialSeconds = seconds + minutes * 60 + hours * 3600 + days * 86400 - userSeconds;
     this.setState({
       seconds: this.calculateSeconds(initialSeconds),
       minutes: this.calculateMinutes(initialSeconds),
       hours: this.calculateHours(initialSeconds),
+	  days: this.calculateDays(initialSeconds),
     });
   };
 
   setTimer = () => {
     this.timer = setInterval(() => {
-      let {seconds, minutes, hours} = this.state;
+      let {seconds, minutes, hours, days} = this.state;
 
       if (seconds === 0 && minutes !== 0) {
         minutes--;
         seconds = 59;
-      } else if (seconds === 0 && minutes === 0 && hours === 0) {
+      } else if (seconds === 0 && minutes === 0 && hours === 0 && days === 0) {
         if (this.props.onTimeOut) {
           this.props.onTimeOut();
         }
@@ -181,10 +210,15 @@ class CountDown extends Component {
         hours--;
         minutes = 59;
         seconds = 59;
+      } else if (seconds === 0 && minutes === 0 && hours === 0) {
+        days--;
+		hours = 23;
+        minutes = 59;
+        seconds = 59;
       } else {
         seconds--;
       }
-      this.setState({seconds, minutes, hours});
+      this.setState({seconds, minutes, hours, days});
     }, 1000);
   };
 
@@ -192,7 +226,8 @@ class CountDown extends Component {
     if (this.state.seconds !== prevState.seconds) {
       if (this.props.onChange) {
         this.props.onChange(
-          this.state.hours,
+          this.state.days,
+		  this.state.hours,
           this.state.minutes,
           this.state.seconds,
         );
@@ -214,8 +249,8 @@ class CountDown extends Component {
       duration: 1000,
       easing: Easing.linear,
     }).start(() => {
-      const {seconds, minutes, hours} = this.state;
-      if ((seconds || minutes || hours) && !this.props.pause)
+      const {seconds, minutes, hours, days} = this.state;
+      if ((seconds || minutes || hours || days) && !this.props.pause)
         this.startAnimate();
     });
   }
@@ -266,10 +301,10 @@ class CountDown extends Component {
       if (!this.props.pause && this.props.activeInBackground) {
         const difference = Date.now() - this.wentBackAt;
 
-        const {seconds, minutes, hours} = this.state;
+        const {seconds, minutes, hours, days} = this.state;
 
         const initialSeconds = Math.max(
-          seconds + minutes * 60 + hours * 60 - Math.round(difference / 1000),
+          seconds + minutes * 60 + hours * 60 + days * 86400 - Math.round(difference / 1000),
           0,
         );
 
@@ -277,6 +312,7 @@ class CountDown extends Component {
           seconds: this.calculateSeconds(initialSeconds),
           minutes: this.calculateMinutes(initialSeconds),
           hours: this.calculateHours(initialSeconds),
+		  days: this.calculateDays(initialSeconds),
         });
       }
     } else {
@@ -304,15 +340,18 @@ class CountDown extends Component {
   }
 
   render() {
-    const {seconds, minutes, hours} = this.state;
+    const {seconds, minutes, hours, days} = this.state;
     const {
-      propStyleForHoursBackground,
+      propStyleForDaysBackground,
+	  propStyleForHoursBackground,
       propStyleForMinutesBackground,
       propStyleForSecondsBackground,
-      propStyleForHoursDigit,
+      propStyleForDaysDigit,
+	  propStyleForHoursDigit,
       propStyleForMinutesDigit,
       propStyleForSecondsDigit,
-      propStyleForHoursText,
+      propStyleForDaysText,
+	  propStyleForHoursText,
       propStyleForMinutesText,
       propStyleForSecondsText,
       flexDirection,
@@ -321,10 +360,12 @@ class CountDown extends Component {
       enableLabel,
       width,
       height,
-      hoursLabel,
+      daysLabel,
+	  hoursLabel,
       minutesLabel,
       secondsLabel,
-      showHours,
+      showDays,
+	  showHours,
       showMinutes,
       showSeparator,
       animateSeparator,
@@ -351,6 +392,47 @@ class CountDown extends Component {
 
       return (
         <View style={[styles.container, {width, height}]}>
+		  
+		  {(days > 0 || showDays) && (
+            <Animated.View
+              style={[
+                styles.daysBackground,
+                propStyleForDaysBackground,
+                {
+                  flexDirection,
+                  backgroundColor: this.animateBackgroundColor(
+                    this.propStyleForDaysBackground.backgroundColor,
+                    backgroundColor,
+                  ),
+                },
+              ]}>
+              <Animated.Text style={[propStyleForDaysDigit, {color: this.animateDigitColor(propStyleForDaysDigit.color, digitColor)}]}>
+                {days < 10 ? '0' + days : days}
+              </Animated.Text>
+              {enableLabel && (
+                <Animated.Text style={[propStyleForDaysText, {color: this.animateTextColor(propStyleForDaysText.color, labelColor)}]}>
+                  {daysLabel}
+                </Animated.Text>
+              )}
+            </Animated.View>
+          )}
+		  
+		  {showSeparator && (days > 0 || showDays) && (
+            <Animated.Text
+              style={[
+                {
+                  textAlignVertical: 'center',
+                  fontSize: 30,
+                  opacity: animateSeparator ? opacity : 1,
+                },
+                separatorStyle,
+              ]}>
+              {' '}
+              :{' '}
+            </Animated.Text>
+          )}
+
+		  
           {(hours > 0 || showHours) && (
             <Animated.View
               style={[
@@ -449,6 +531,38 @@ class CountDown extends Component {
     } else
       return (
         <View style={[styles.container, {width, height}]}>
+		
+		  {(days > 0 || showDays) && (
+            <View
+              style={[
+                styles.daysBackground,
+                propStyleForDaysBackground,
+                {flexDirection},
+              ]}>
+              <Text style={[propStyleForDaysDigit]}>
+                {days < 10 ? '0' + days : days}
+              </Text>
+              {enableLabel && (
+                <Text style={propStyleForDaysText}>{daysLabel}</Text>
+              )}
+            </View>
+          )}
+
+          {showSeparator && (days > 0 || showDays) && (
+            <Animated.Text
+              style={[
+                {
+                  textAlignVertical: 'center',
+                  fontSize: 30,
+                  opacity: animateSeparator ? opacity : 1,
+                },
+                separatorStyle,
+              ]}>
+              {' '}
+              :{' '}
+            </Animated.Text>
+          )}
+		
           {(hours > 0 || showHours) && (
             <View
               style={[
@@ -534,6 +648,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
   },
+  
+  daysBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   hoursBackground: {
     flex: 1,
@@ -558,6 +678,7 @@ CountDown.propTypes = {
   initialSeconds: propTypes.number,
   onTimeOut: propTypes.func.isRequired,
   backgroundColor: propTypes.string,
+  daysBackgroundStyle: propTypes.object,
   hoursBackgroundStyle: propTypes.object,
   minutesBackgroundStyle: propTypes.object,
   secondsBackgroundStyle: propTypes.object,
@@ -567,6 +688,7 @@ CountDown.propTypes = {
   height: propTypes.oneOfType([propTypes.string, propTypes.number]),
   borderRadius: propTypes.oneOfType([propTypes.string, propTypes.number]),
   digitFontSize: propTypes.oneOfType([propTypes.string, propTypes.number]),
+  daysDigitFontStyle: propTypes.object,
   hoursDigitFontStyle: propTypes.object,
   minutesDigitFontStyle: propTypes.object,
   secondsDigitFontStyle: propTypes.object,
@@ -574,14 +696,17 @@ CountDown.propTypes = {
   labelColor: propTypes.string,
   labelFontSize: propTypes.oneOfType([propTypes.string, propTypes.number]),
   labelFontWeight: propTypes.string,
+  daysLabelFontStyle: propTypes.object,
   hoursLabelFontStyle: propTypes.object,
   minutesLabelFontStyle: propTypes.object,
   secondsLabelFontStyle: propTypes.object,
   labelPosition: propTypes.oneOf(['top', 'bottom']),
   enableLabel: propTypes.bool,
+  daysLabel: propTypes.string,
   hoursLabel: propTypes.string,
   minutesLabel: propTypes.string,
   secondsLabel: propTypes.string,
+  showDays: propTypes.bool,
   showHours: propTypes.bool,
   showMinutes: propTypes.bool,
   onChange: propTypes.func,
@@ -611,9 +736,11 @@ CountDown.defaultProps = {
   labelColor: 'black',
   labelFontSize: 10,
   labelPosition: 'bottom',
+  daysLabel: 'Days',
   hoursLabel: 'Hours',
   minutesLabel: 'Minutes',
   secondsLabel: 'Seconds',
+  showDays: true,
   showHours: true,
   showMinutes: true,
   showSeparator: false,
