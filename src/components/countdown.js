@@ -142,9 +142,9 @@ class CountDown extends Component {
   
   calculateMinutes = initialSeconds => Math.floor(initialSeconds / 60) % 60;
 
-  calculateHours = initialSeconds => Math.floor(initialSeconds / (60 * 60) % 24);
+  calculateHours = initialSeconds => Math.floor(initialSeconds / (60 * 60)) % 24;
 	
-  calculateDays = initialSeconds => Math.floor(initialSeconds / (60 * 60 * 24));
+  calculateDays = initialSeconds => Math.floor(initialSeconds / (60 * 60 * 24)) % 365;
 
   calculateTotalSeconds = () => {
     const {seconds, minutes, hours, days} = this.state;
